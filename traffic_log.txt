@@ -1,0 +1,8 @@
+[Wed Apr 16 23:56:50 2025] Vehicle 2 moved to node 4
+[Wed Apr 16 23:56:50 2025] Vehicle 1 moved to node 5
+[Wed Apr 16 23:56:50 2025] Vehicle 0 moved to node 2
+[Wed Apr 16 23:56:51 2025] Vehicle 2 moved to node 5
+[Wed Apr 16 23:56:51 2025] Vehicle 0 moved to node 3
+[Wed Apr 16 23:56:52 2025] Vehicle 2 moved to node 6
+[Wed Apr 16 23:56:52 2025] Vehicle 0 moved to node 4
+[Wed Apr 16 23:56:56 2025] Accident simulated between 3 and 5
