@@ -1,8 +1,113 @@
-[Wed Apr 16 23:56:50 2025] Vehicle 2 moved to node 4
-[Wed Apr 16 23:56:50 2025] Vehicle 1 moved to node 5
-[Wed Apr 16 23:56:50 2025] Vehicle 0 moved to node 2
-[Wed Apr 16 23:56:51 2025] Vehicle 2 moved to node 5
-[Wed Apr 16 23:56:51 2025] Vehicle 0 moved to node 3
-[Wed Apr 16 23:56:52 2025] Vehicle 2 moved to node 6
-[Wed Apr 16 23:56:52 2025] Vehicle 0 moved to node 4
-[Wed Apr 16 23:56:56 2025] Accident simulated between 3 and 5
+[Thu Apr 17 10:17:05 2025] Vehicle 2 moved to node 4
+[Thu Apr 17 10:17:05 2025] Vehicle 1 moved to node 5
+[Thu Apr 17 10:17:05 2025] Vehicle 0 moved to node 2
+[Thu Apr 17 10:17:06 2025] Vehicle 2 moved to node 5
+[Thu Apr 17 10:17:06 2025] Vehicle 0 moved to node 3
+[Thu Apr 17 10:17:07 2025] Vehicle 2 moved to node 6
+[Thu Apr 17 10:17:07 2025] Vehicle 0 moved to node 4
+[Thu Apr 17 10:17:11 2025] Accident simulated between 6 and 2
+[Thu Apr 17 10:17:21 2025] Accident simulated between 5 and 6
+[Thu Apr 17 15:29:48 2025] Vehicle 0 joined queue at 1
+[Thu Apr 17 15:29:48 2025] Vehicle 1 joined queue at 2
+[Thu Apr 17 15:29:48 2025] Vehicle 2 joined queue at 3
+[Thu Apr 17 15:29:48 2025] Vehicle 0 moved to 2
+[Thu Apr 17 15:29:48 2025] Vehicle 1 moved to 5
+[Thu Apr 17 15:29:48 2025] Vehicle 2 moved to 4
+[Thu Apr 17 15:29:48 2025] Vehicle 0 joined queue at 2
+[Thu Apr 17 15:29:48 2025] Vehicle 2 joined queue at 4
+[Thu Apr 17 15:29:48 2025] Vehicle 0 moved to 3
+[Thu Apr 17 15:29:48 2025] Vehicle 2 moved to 5
+[Thu Apr 17 15:29:48 2025] Vehicle 0 joined queue at 3
+[Thu Apr 17 15:29:48 2025] Vehicle 2 joined queue at 5
+[Thu Apr 17 15:29:48 2025] Vehicle 0 moved to 4
+[Thu Apr 17 15:29:48 2025] Vehicle 2 moved to 6
+[Thu Apr 17 15:29:48 2025] Accident between 3 and 1
+[Thu Apr 17 15:29:48 2025] Accident between 4 and 2
+[Thu Apr 17 15:45:13 2025] Vehicle 0 joined queue at 1
+[Thu Apr 17 15:45:13 2025] Vehicle 1 joined queue at 2
+[Thu Apr 17 15:45:13 2025] Vehicle 2 joined queue at 3
+[Thu Apr 17 15:45:13 2025] Vehicle 3 joined queue at 5
+[Thu Apr 17 15:45:13 2025] Vehicle 4 joined queue at 6
+[Thu Apr 17 15:45:13 2025] Vehicle 5 joined queue at 7
+[Thu Apr 17 15:45:13 2025] Vehicle 6 joined queue at 8
+[Thu Apr 17 15:45:13 2025] Vehicle 7 joined queue at 9
+[Thu Apr 17 15:45:13 2025] Vehicle 8 joined queue at 10
+[Thu Apr 17 15:45:13 2025] Vehicle 9 joined queue at 4
+[Thu Apr 17 15:45:13 2025] Accident between 6 and 5
+[Thu Apr 17 15:45:13 2025] Vehicle 0 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 1 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 2 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 3 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 4 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 5 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 6 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 7 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 8 rerouted
+[Thu Apr 17 15:45:13 2025] Vehicle 9 rerouted
+[Thu Apr 17 15:47:01 2025] Vehicle 0 joined queue at 1
+[Thu Apr 17 15:47:01 2025] Vehicle 1 joined queue at 2
+[Thu Apr 17 15:47:01 2025] Vehicle 2 joined queue at 3
+[Thu Apr 17 15:47:01 2025] Vehicle 3 joined queue at 5
+[Thu Apr 17 15:47:01 2025] Vehicle 4 joined queue at 6
+[Thu Apr 17 15:47:01 2025] Vehicle 5 joined queue at 7
+[Thu Apr 17 15:47:01 2025] Vehicle 6 joined queue at 8
+[Thu Apr 17 15:47:01 2025] Vehicle 7 joined queue at 9
+[Thu Apr 17 15:47:01 2025] Vehicle 8 joined queue at 10
+[Thu Apr 17 15:47:01 2025] Vehicle 9 joined queue at 4
+[Thu Apr 17 15:48:32 2025] Accident between 3 and 6
+[Thu Apr 17 15:48:32 2025] Vehicle 0 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 1 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 2 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 3 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 4 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 5 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 6 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 7 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 8 rerouted
+[Thu Apr 17 15:48:32 2025] Vehicle 9 rerouted
+[Thu Apr 17 15:48:33 2025] Emergency Vehicle 9 moved to 7
+[Thu Apr 17 15:48:33 2025] Emergency Vehicle 9 moved to 7
+[Thu Apr 17 15:48:33 2025] Emergency Vehicle 7 moved to 6
+[Thu Apr 17 15:48:33 2025] Emergency Vehicle 7 moved to 6
+[Thu Apr 17 15:48:33 2025] Emergency Vehicle 8 moved to 5
+[Thu Apr 17 15:48:33 2025] Emergency Vehicle 8 reached destination
+[Thu Apr 17 15:48:33 2025] Emergency Vehicle 8 moved to 5
+[Thu Apr 17 15:48:33 2025] Vehicle 7 joined queue at 6
+[Thu Apr 17 15:48:33 2025] Vehicle 9 joined queue at 7
+[Thu Apr 17 15:48:50 2025] Added Vehicle 10 from 5 to 9
+[Thu Apr 17 15:48:51 2025] Emergency Vehicle 7 moved to 2
+[Thu Apr 17 15:48:51 2025] Emergency Vehicle 7 moved to 2
+[Thu Apr 17 15:48:51 2025] Emergency Vehicle 9 moved to 6
+[Thu Apr 17 15:48:51 2025] Emergency Vehicle 9 reached destination
+[Thu Apr 17 15:48:51 2025] Emergency Vehicle 9 moved to 6
+[Thu Apr 17 15:48:51 2025] Vehicle 7 joined queue at 2
+[Thu Apr 17 15:48:51 2025] Vehicle 10 joined queue at 5
+[Thu Apr 17 15:49:03 2025] Added Vehicle 11 from 2 to 10
+[Thu Apr 17 15:49:04 2025] Intersection 1 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 2 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 3 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 4 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 5 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 6 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 7 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 8 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 9 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Intersection 10 light changed to GREEN
+[Thu Apr 17 15:49:04 2025] Vehicle 0 moved to 2
+[Thu Apr 17 15:49:04 2025] Emergency Vehicle 7 moved to 3
+[Thu Apr 17 15:49:04 2025] Emergency Vehicle 7 reached destination
+[Thu Apr 17 15:49:04 2025] Emergency Vehicle 7 moved to 3
+[Thu Apr 17 15:49:04 2025] Vehicle 1 moved to 3
+[Thu Apr 17 15:49:04 2025] Vehicle 2 moved to 2
+[Thu Apr 17 15:49:04 2025] Vehicle 3 moved to 6
+[Thu Apr 17 15:49:04 2025] Vehicle 4 moved to 9
+[Thu Apr 17 15:49:04 2025] Vehicle 4 reached destination
+[Thu Apr 17 15:49:04 2025] Vehicle 5 moved to 6
+[Thu Apr 17 15:49:04 2025] Vehicle 6 moved to 3
+[Thu Apr 17 15:49:04 2025] Vehicle 0 joined queue at 2
+[Thu Apr 17 15:49:04 2025] Vehicle 1 joined queue at 3
+[Thu Apr 17 15:49:04 2025] Vehicle 2 joined queue at 2
+[Thu Apr 17 15:49:04 2025] Vehicle 3 joined queue at 6
+[Thu Apr 17 15:49:04 2025] Vehicle 5 joined queue at 6
+[Thu Apr 17 15:49:04 2025] Vehicle 6 joined queue at 3
+[Thu Apr 17 15:49:04 2025] Vehicle 11 joined queue at 2
