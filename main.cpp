@@ -1,602 +1,431 @@
+#include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
-#include <algorithm>
-#include <fstream>
-#include <ctime>
-#include <cstdlib>
+#include <queue>
+#include <map>
 #include <string>
-#include <thread>
-#include <chrono>
+#include <limits>
+#include <algorithm>
+#include <random>
 
 using namespace std;
 
-// Enum for traffic light states with durations
-enum LightState { RED = 4, GREEN = 5, YELLOW = 2 };
+// Forward declarations
+class Intersection;
+class Road;
+class TrafficLight;
+class Vehicle;
+class RoadNetwork;
+class Simulation;
 
-// Logger class for event logging
-class Logger {
-public:
-    // Static method to log messages to a file with timestamp
-    static void log(const string& message) {
-        ofstream file("traffic_log.txt", ios::app);
-        if (file.is_open()) {
-            time_t now = time(0);
-            string dt = ctime(&now);
-            dt.pop_back(); // Remove newline
-            file << "[" << dt << "] " << message << endl;
-            file.close();
-        }
-    }
-};
-
-// TrafficLight class managing light states and timers
-class TrafficLight {
-public:
-    LightState state;      // Current state (RED, GREEN, YELLOW)
-    int timer;             // Time until state change
-    int extendedGreenTime; // Extended green time for busy intersections
-    int minGreenTime;      // Minimum green time
-    int maxGreenTime;      // Maximum green time
-    LightState prevState;  // Previous state for change detection
-
-    // Constructor initializing light
-    TrafficLight() : state(RED), timer(RED), extendedGreenTime(7), 
-                     minGreenTime(3), maxGreenTime(10), prevState(RED) {}
-
-    // Update light state based on queue size and traffic density
-    bool update(int queueSize, double trafficDensity) {
-        // Store current state for change detection
-        prevState = state;
-
-        // Adjust green time dynamically based on queue size and density
-        int currentGreenTime = GREEN;
-        if (queueSize > 3 || trafficDensity > 0.5) {
-            currentGreenTime = min(extendedGreenTime + queueSize / 2, maxGreenTime);
-        } else {
-            currentGreenTime = max(static_cast<int>(GREEN), minGreenTime);
-        }
-
-        timer--;
-        if (timer <= 0) {
-            if (state == RED) {
-                state = GREEN;
-                timer = currentGreenTime;
-            } else if (state == GREEN) {
-                state = YELLOW;
-                timer = YELLOW;
-            } else {
-                state = RED;
-                timer = RED;
-            }
-        }
-
-        // Return true if state changed
-        return state != prevState;
-    }
-
-    // Convert enum state to string for output
-    string getStateString() const {
-        switch (state) {
-            case RED: return "RED";
-            case GREEN: return "GREEN";
-            case YELLOW: return "YELLOW";
-            default: return "UNKNOWN";
-        }
-    }
-
-    // Log light state change
-    void logStateChange(int intersectionId) {
-        Logger::log("Intersection " + to_string(intersectionId) + " light changed to " + getStateString());
-    }
-};
-
-// Road class representing a connection between intersections
-class Road {
-public:
-    int start;     // Starting intersection ID
-    int end;       // Ending intersection ID
-    int weight;    // Distance or travel time
-    bool blocked;  // True if road is blocked (e.g., by accident)
-
-    // Constructor for a road
-    Road(int s, int e, int w) : start(s), end(e), weight(w), blocked(false) {}
-
-    // Display road details for debugging
-    void display() const {
-        cout << "Road from " << start << " to " << end << ", Weight: " << weight
-             << ", Blocked: " << (blocked ? "Yes" : "No") << endl;
-    }
-};
-
-// Intersection class representing a node with a light and queue
+// Intersection class
 class Intersection {
 public:
-    int id;                // Unique ID
-    TrafficLight light;    // Traffic light
-    vector<int> queue;     // Vehicle IDs waiting
-    int maxQueueSize;      // Maximum queue capacity
-    int totalWaitTime;     // Sum of wait times for congestion analysis
-    int vehiclesProcessed;  // Number of vehicles passed through
+    int id;
+    double x, y;
+    TrafficLight* traffic_light;
+    map<Road*, string> incoming_road_labels;
+    map<Road*, queue<Vehicle*>> queues;
 
-    // Constructor
-    Intersection(int i) : id(i), maxQueueSize(5), totalWaitTime(0), vehiclesProcessed(0) {}
+    Intersection(int id, double x, double y) : id(id), x(x), y(y), traffic_light(nullptr) {}
+};
 
-    // Add vehicle to queue
-    bool addToQueue(int vehicleId) {
-        if (queue.size() < maxQueueSize) {
-            queue.push_back(vehicleId);
-            return true;
-        }
-        return false;
-    }
+// Road class
+class Road {
+public:
+    int from, to;
+    double length;
+    double speed_limit;
+    vector<pair<Vehicle*, double>> vehicles;
 
-    // Remove first vehicle from queue
-    int releaseVehicle() {
-        if (queue.empty()) return -1;
-        int vehicleId = queue[0];
-        queue.erase(queue.begin());
-        vehiclesProcessed++;
-        return vehicleId;
-    }
+    Road(int from, int to, double length, double speed_limit)
+        : from(from), to(to), length(length), speed_limit(speed_limit) {}
+};
 
-    // Update wait time for congestion analysis
-    void updateWaitTime() {
-        totalWaitTime += queue.size();
-    }
+// TrafficLight class
+class TrafficLight {
+public:
+    int phase_duration;
+    int offset;
 
-    // Get average wait time
-    double getAverageWaitTime() const {
-        return vehiclesProcessed > 0 ? (double)totalWaitTime / vehiclesProcessed : 0.0;
+    TrafficLight(int duration, int offset) : phase_duration(duration), offset(offset) {}
+
+    vector<string> get_allowed_labels(int time) {
+        int adjusted_time = (time + offset) % (2 * phase_duration);
+        int phase = (adjusted_time / phase_duration) % 2;
+        return phase == 0 ? vector<string>{"north", "south"} : vector<string>{"east", "west"};
     }
 };
 
-// Network class managing intersections and roads
-class Network {
+// Vehicle class
+class Vehicle {
 public:
-    vector<Road> roads;          // List of all roads
-    vector<Intersection> intersections; // List of all intersections
+    int id;
+    vector<int> path;
+    int current_index;
+    Road* current_road;
+    double position;
+    double speed;
+    sf::Color color;
+    sf::Vector2f size;
 
-    // Add a new intersection
-    void addIntersection(int id) {
-        intersections.push_back(Intersection(id));
+    Vehicle(int id, const vector<int>& path, double speed, sf::Color color, sf::Vector2f size)
+        : id(id), path(path), current_index(0), current_road(nullptr), position(0), speed(speed), color(color), size(size) {}
+};
+
+// Derived vehicle classes
+class Car : public Vehicle {
+public:
+    Car(int id, const vector<int>& path, mt19937& gen)
+        : Vehicle(id, path, uniform_real_distribution<>(8.0, 12.0)(gen), sf::Color::Green, sf::Vector2f(20, 10)) {}
+};
+
+class Truck : public Vehicle {
+public:
+    Truck(int id, const vector<int>& path, mt19937& gen)
+        : Vehicle(id, path, uniform_real_distribution<>(5.0, 8.0)(gen), sf::Color::Blue, sf::Vector2f(30, 15)) {}
+};
+
+class Motorcycle : public Vehicle {
+public:
+    Motorcycle(int id, const vector<int>& path, mt19937& gen)
+        : Vehicle(id, path, uniform_real_distribution<>(10.0, 15.0)(gen), sf::Color::Red, sf::Vector2f(10, 5)) {}
+};
+
+// RoadNetwork class
+class RoadNetwork {
+public:
+    vector<Intersection*> intersections;
+    vector<Road*> roads;
+    map<pair<int, int>, Road*> road_map;
+
+    void add_intersection(int id, double x, double y) {
+        intersections.push_back(new Intersection(id, x, y));
     }
 
-    // Add a two-way road
-    void addRoad(int start, int end, int weight) {
-        roads.push_back(Road(start, end, weight));
+    void add_road(int from, int to, double length, double speed_limit) {
+        Road* road = new Road(from, to, length, speed_limit);
+        roads.push_back(road);
+        road_map[{from, to}] = road;
     }
 
-    // Block a road due to an accident
-    void blockRoad(int start, int end) {
-        for (auto& road : roads) {
-            if ((road.start == start && road.end == end) || (road.start == end && road.end == start)) {
-                road.blocked = true;
+    void setup_traffic_lights() {
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_int_distribution<> dis(0, 20);
+
+        for (auto inter : intersections) {
+            int offset = dis(gen);
+            inter->traffic_light = new TrafficLight(20, offset);
+            for (auto road : roads) {
+                if (road->to == inter->id) {
+                    Intersection* from_inter = nullptr;
+                    for (auto i : intersections) {
+                        if (i->id == road->from) {
+                            from_inter = i;
+                            break;
+                        }
+                    }
+                    double dx = from_inter->x - inter->x;
+                    double dy = from_inter->y - inter->y;
+                    if (abs(dx) > abs(dy)) {
+                        inter->incoming_road_labels[road] = (dx > 0) ? "west" : "east";
+                    } else {
+                        inter->incoming_road_labels[road] = (dy > 0) ? "south" : "north";
+                    }
+                }
             }
         }
     }
 
-    // Find shortest path using Dijkstra’s algorithm
-    vector<int> findPath(int start, int end) {
-        vector<int> dist(intersections.size() + 1, 999999);
-        vector<int> prev(intersections.size() + 1, -1);
-        vector<bool> visited(intersections.size() + 1, false);
+    vector<int> shortest_path(int start, int end) {
+        map<int, double> dist;
+        map<int, int> prev;
+        priority_queue<pair<double, int>, vector<pair<double, int>>, greater<>> pq;
+
+        for (auto inter : intersections) {
+            dist[inter->id] = numeric_limits<double>::infinity();
+        }
         dist[start] = 0;
+        pq.push({0, start});
 
-        for (size_t i = 0; i < intersections.size(); ++i) {
-            int minDist = 999999, minNode = -1;
-            for (size_t j = 1; j <= intersections.size(); ++j) {
-                if (!visited[j] && dist[j] < minDist) {
-                    minDist = dist[j];
-                    minNode = j;
-                }
-            }
-            if (minNode == -1) break;
-
-            visited[minNode] = true;
-            if (minNode == end) break;
-
-            for (const auto& road : roads) {
-                if (road.blocked) continue;
-                if (road.start == minNode) {
-                    int next = road.end;
-                    if (dist[minNode] + road.weight < dist[next]) {
-                        dist[next] = dist[minNode] + road.weight;
-                        prev[next] = minNode;
-                    }
-                } else if (road.end == minNode) {
-                    int next = road.start;
-                    if (dist[minNode] + road.weight < dist[next]) {
-                        dist[next] = dist[minNode] + road.weight;
-                        prev[next] = minNode;
+        while (!pq.empty()) {
+            int u = pq.top().second;
+            pq.pop();
+            if (u == end) break;
+            for (auto road : roads) {
+                if (road->from == u) {
+                    double weight = road->length / road->speed_limit;
+                    int v = road->to;
+                    if (dist[u] + weight < dist[v]) {
+                        dist[v] = dist[u] + weight;
+                        prev[v] = u;
+                        pq.push({dist[v], v});
                     }
                 }
             }
         }
 
         vector<int> path;
-        int current = end;
-        while (current != -1) {
-            path.push_back(current);
-            current = prev[current];
+        for (int at = end; at != start; at = prev[at]) {
+            path.push_back(at);
         }
+        path.push_back(start);
         reverse(path.begin(), path.end());
-        if (path[0] != start) return {};
         return path;
     }
 
-    // Calculate traffic density (average queue length)
-    double calculateTrafficDensity() const {
-        double totalQueueSize = 0;
-        for (const auto& inter : intersections) {
-            totalQueueSize += inter.queue.size();
-        }
-        return intersections.empty() ? 0.0 : totalQueueSize / intersections.size();
-    }
-
-    // Display network status for debugging
-    void displayNetwork() const {
-        cout << "Network Status:\n";
-        for (const auto& road : roads) {
-            road.display();
-        }
-        for (const auto& inter : intersections) {
-            cout << "Intersection " << inter.id << ": Queue Size = " << inter.queue.size() << endl;
-        }
+    Road* get_road(int from, int to) {
+        auto it = road_map.find({from, to});
+        return it != road_map.end() ? it->second : nullptr;
     }
 };
 
-// Base Vehicle class
-class Vehicle {
-public:
-    int id;           // Unique vehicle ID
-    int current;      // Current intersection
-    int destination;  // Target intersection
-    vector<int> path; // Planned path
-    bool arrived;     // True if at destination
-    bool inQueue;     // True if in a queue
-    int waitTime;     // Time spent waiting
-
-    // Constructor
-    Vehicle(int i, int start, int dest, Network& network)
-        : id(i), current(start), destination(dest), arrived(false), inQueue(false), waitTime(0) {
-        path = network.findPath(start, dest);
-        if (path.empty()) arrived = true;
-    }
-
-    // Move vehicle to next intersection
-    virtual void move(Network& network) {
-        if (arrived || path.empty()) return;
-        int nextIndex = -1;
-        for (size_t i = 0; i < path.size(); ++i) {
-            if (path[i] == current) {
-                nextIndex = i + 1;
-                break;
-            }
-        }
-        if (nextIndex >= (int)path.size()) {
-            arrived = true;
-            return;
-        }
-        current = path[nextIndex];
-        inQueue = false;
-        waitTime = 0;
-        cout << "Vehicle " << id << " moved to intersection " << current << endl;
-        Logger::log("Vehicle " + to_string(id) + " moved to " + to_string(current));
-        if (current == destination) {
-            arrived = true;
-            cout << "Vehicle " << id << " reached destination!" << endl;
-            Logger::log("Vehicle " + to_string(id) + " reached destination");
-        }
-    }
-
-    // Reroute vehicle if path is blocked
-    virtual void reroute(Network& network) {
-        path = network.findPath(current, destination);
-        if (path.empty()) arrived = true;
-        cout << "Vehicle " << id << " rerouted.\n";
-        Logger::log("Vehicle " + to_string(id) + " rerouted");
-    }
-
-    // Update wait time
-    void incrementWaitTime() {
-        if (inQueue) waitTime++;
-    }
-
-    // Check if vehicle is emergency (for polymorphism)
-    virtual bool isEmergency() const { return false; }
-
-    // Virtual destructor for polymorphism
-    virtual ~Vehicle() {}
-};
-
-// EmergencyVehicle class inheriting from Vehicle
-class EmergencyVehicle : public Vehicle {
-public:
-    // Constructor
-    EmergencyVehicle(int i, int start, int dest, Network& network)
-        : Vehicle(i, start, dest, network) {}
-
-    // Override move to ignore light state
-    void move(Network& network) override {
-        if (arrived || path.empty()) return;
-        int nextIndex = -1;
-        for (size_t i = 0; i < path.size(); ++i) {
-            if (path[i] == current) {
-                nextIndex = i + 1;
-                break;
-            }
-        }
-        if (nextIndex >= (int)path.size()) {
-            arrived = true;
-            return;
-        }
-        current = path[nextIndex];
-        inQueue = false;
-        waitTime = 0;
-        cout << "Emergency Vehicle " << id << " moved to intersection " << current << endl;
-        Logger::log("Emergency Vehicle " + to_string(id) + " moved to " + to_string(current));
-        if (current == destination) {
-            arrived = true;
-            cout << "Emergency Vehicle " << id << " reached destination!" << endl;
-            Logger::log("Emergency Vehicle " + to_string(id) + " reached destination");
-        }
-    }
-
-    // Emergency vehicles have priority
-    bool isEmergency() const override { return true; }
-};
-
-// Simulation class managing the entire system
+// Simulation class with SFML
 class Simulation {
 public:
-    Network network;           // Road network
-    vector<Vehicle*> vehicles; // Polymorphic vector for Vehicle and EmergencyVehicle
-    int time;                  // Current time step
-    int totalVehicles;         // Total vehicles created
+    int current_time;
+    RoadNetwork* road_network;
+    vector<Vehicle*> vehicles;
+    random_device rd;
+    mt19937 gen;
+    sf::RenderWindow window;
+    sf::Font font;
+    int next_spawn_time;
 
-    // Constructor
-    Simulation() : time(0), totalVehicles(0) {}
-
-    // Setup the expanded road network and vehicles
-    void setup() {
-        // Add 10 intersections
-        for (int i = 1; i <= 10; ++i) {
-            network.addIntersection(i);
-        }
-
-        // Add 20 roads (grid-like with extra connections)
-        network.addRoad(1, 2, 5);
-        network.addRoad(2, 3, 3);
-        network.addRoad(3, 4, 4);
-        network.addRoad(5, 6, 6);
-        network.addRoad(6, 7, 3);
-        network.addRoad(7, 8, 5);
-        network.addRoad(9, 10, 4);
-        network.addRoad(1, 5, 7);
-        network.addRoad(2, 6, 5);
-        network.addRoad(3, 7, 6);
-        network.addRoad(4, 8, 4);
-        network.addRoad(5, 9, 5);
-        network.addRoad(6, 10, 6);
-        network.addRoad(1, 6, 8);
-        network.addRoad(2, 7, 7);
-        network.addRoad(3, 8, 5);
-        network.addRoad(5, 10, 6);
-        network.addRoad(6, 9, 4);
-        network.addRoad(4, 7, 5);
-        network.addRoad(2, 5, 6);
-
-        // Add 10 vehicles (7 regular, 3 emergency)
-        vehicles.push_back(new Vehicle(totalVehicles++, 1, 4, network));
-        vehicles.push_back(new Vehicle(totalVehicles++, 2, 8, network));
-        vehicles.push_back(new Vehicle(totalVehicles++, 3, 10, network));
-        vehicles.push_back(new Vehicle(totalVehicles++, 5, 7, network));
-        vehicles.push_back(new Vehicle(totalVehicles++, 6, 9, network));
-        vehicles.push_back(new Vehicle(totalVehicles++, 7, 1, network));
-        vehicles.push_back(new Vehicle(totalVehicles++, 8, 2, network));
-        vehicles.push_back(new EmergencyVehicle(totalVehicles++, 9, 3, network));
-        vehicles.push_back(new EmergencyVehicle(totalVehicles++, 10, 5, network));
-        vehicles.push_back(new EmergencyVehicle(totalVehicles++, 4, 6, network));
-    }
-
-    // Simulate a random accident
-    void simulateAccident() {
-        int start = rand() % 10 + 1;
-        int end = rand() % 10 + 1;
-        while (end == start) end = rand() % 10 + 1;
-        network.blockRoad(start, end);
-        cout << "Accident blocked road between " << start << " and " << end << endl;
-        Logger::log("Accident between " + to_string(start) + " and " + to_string(end));
-        for (auto& vehicle : vehicles) {
-            if (!vehicle->arrived) vehicle->reroute(network);
+    Simulation(RoadNetwork* rn) : current_time(0), road_network(rn), gen(rd()), window(sf::VideoMode(800, 800), "Traffic Simulation"), next_spawn_time(0) {
+        if (!font.loadFromFile("arial.ttf")) {
+            cout << "Error loading font" << endl;
         }
     }
 
-    // Add a new vehicle based on user input
-    void addUserVehicle(int start, int dest) {
-        if (start >= 1 && start <= 10 && dest >= 1 && dest <= 10) {
-            vehicles.push_back(new Vehicle(totalVehicles++, start, dest, network));
-            cout << "Added Vehicle " << totalVehicles - 1 << " from " << start << " to " << dest << endl;
-            Logger::log("Added Vehicle " + to_string(totalVehicles - 1) + " from " + to_string(start) + " to " + to_string(dest));
-        } else {
-            cout << "Invalid start or destination.\n";
+    void spawn_vehicle(int id, int start, int end) {
+        vector<int> path = road_network->shortest_path(start, end);
+        if (path.size() < 2) return; // Invalid path
+        int type_idx = uniform_int_distribution<>(0, 2)(gen);
+        Vehicle* veh;
+        if (type_idx == 0) veh = new Car(id, path, gen);
+        else if (type_idx == 1) veh = new Truck(id, path, gen);
+        else veh = new Motorcycle(id, path, gen);
+        vehicles.push_back(veh);
+        Road* first_road = road_network->get_road(path[0], path[1]);
+        if (first_road) {
+            veh->current_road = first_road;
+            first_road->vehicles.push_back({veh, 0});
+            cout << "Time " << current_time << ": " << vehicle_type_to_string(type_idx) << " " << id << " spawned on road " << path[0] << " to " << path[1]
+                 << " (speed: " << veh->speed << " m/s)" << endl;
         }
     }
 
-    // Process user input for interactive features
-    void processUserInput() {
-        cout << "Enter command (accident/add_vehicle/exit): ";
-        string command;
-        cin.clear();
-        getline(cin, command); // Use getline to handle input robustly
-        if (command == "accident") {
-            simulateAccident();
-        } else if (command == "add_vehicle") {
-            int start, dest;
-            cout << "Enter start intersection (1-10): ";
-            cin >> start;
-            cout << "Enter destination intersection (1-10): ";
-            cin >> dest;
-            cin.ignore(); // Clear newline
-            addUserVehicle(start, dest);
-        } else if (command == "exit") {
-            time = 100; // Force simulation to end
+    string vehicle_type_to_string(int type_idx) {
+        switch (type_idx) {
+            case 0: return "Car";
+            case 1: return "Truck";
+            case 2: return "Motorcycle";
         }
+        return "Unknown";
     }
 
-    // Update traffic lights
-    void updateTrafficLights() {
-        double trafficDensity = network.calculateTrafficDensity();
-        for (auto& inter : network.intersections) {
-            if (inter.light.update(inter.queue.size(), trafficDensity)) {
-                inter.light.logStateChange(inter.id);
-            }
-            inter.updateWaitTime();
-        }
-    }
-
-    // Process vehicle queues
-    void processQueues() {
-        for (auto& inter : network.intersections) {
-            // Skip if queue is empty
-            if (inter.queue.empty()) continue;
-
-            // Prioritize emergency vehicles
-            for (size_t i = 0; i < inter.queue.size(); ++i) {
-                for (auto& vehicle : vehicles) {
-                    if (vehicle->id == inter.queue[i] && vehicle->isEmergency()) {
-                        int vehicleId = inter.queue[i];
-                        inter.queue.erase(inter.queue.begin() + i);
-                        vehicle->move(network);
-                        Logger::log("Emergency Vehicle " + to_string(vehicleId) + " moved to " + to_string(vehicle->current));
-                        break;
-                    }
-                }
-            }
-
-            // Regular vehicles move on GREEN
-            if (inter.light.state == GREEN && !inter.queue.empty()) {
-                int vehicleId = inter.releaseVehicle();
-                if (vehicleId != -1) {
-                    for (auto& vehicle : vehicles) {
-                        if (vehicle->id == vehicleId && !vehicle->arrived) {
-                            vehicle->move(network);
+    void update_vehicles_on_roads() {
+        for (auto road : road_network->roads) {
+            for (auto& veh_pair : road->vehicles) {
+                Vehicle* veh = veh_pair.first;
+                veh->position += veh->speed;
+                veh_pair.second = veh->position;
+                if (veh->position >= road->length) {
+                    Intersection* inter = nullptr;
+                    for (auto i : road_network->intersections) {
+                        if (i->id == road->to) {
+                            inter = i;
                             break;
                         }
                     }
+                    inter->queues[road].push(veh);
+                    veh->position = road->length;
                 }
             }
+            road->vehicles.erase(
+                remove_if(road->vehicles.begin(), road->vehicles.end(),
+                    [&](pair<Vehicle*, double>& p) { return p.second >= road->length; }),
+                road->vehicles.end());
         }
     }
 
-    // Add vehicles to queues
-    void addVehiclesToQueues() {
-        for (auto& vehicle : vehicles) {
-            if (!vehicle->arrived && !vehicle->inQueue) {
-                for (auto& inter : network.intersections) {
-                    if (inter.id == vehicle->current && inter.addToQueue(vehicle->id)) {
-                        vehicle->inQueue = true;
-                        cout << "Vehicle " << vehicle->id << " joined queue at intersection " << inter.id << endl;
-                        Logger::log("Vehicle " + to_string(vehicle->id) + " joined queue at " + to_string(inter.id));
-                        break;
+    void process_intersections() {
+        for (auto inter : road_network->intersections) {
+            if (!inter->traffic_light) continue;
+            auto allowed = inter->traffic_light->get_allowed_labels(current_time);
+            for (auto& [road, q] : inter->queues) {
+                string label = inter->incoming_road_labels[road];
+                if (find(allowed.begin(), allowed.end(), label) != allowed.end() && !q.empty()) {
+                    Vehicle* veh = q.front();
+                    q.pop();
+                    veh->current_index++;
+                    if (veh->current_index < veh->path.size() - 1) {
+                        int next_from = veh->path[veh->current_index];
+                        int next_to = veh->path[veh->current_index + 1];
+                        Road* next_road = road_network->get_road(next_from, next_to);
+                        if (next_road) {
+                            veh->current_road = next_road;
+                            veh->position = 0;
+                            next_road->vehicles.push_back({veh, 0});
+                            cout << "Time " << current_time << ": Vehicle " << veh->id << " moved to road "
+                                 << next_from << " to " << next_to << endl;
+                        }
+                    } else {
+                        // Reached destination
+                        cout << "Time " << current_time << ": Vehicle " << veh->id << " reached destination" << endl;
+                        vehicles.erase(remove(vehicles.begin(), vehicles.end(), veh), vehicles.end());
+                        delete veh;
                     }
                 }
             }
-            vehicle->incrementWaitTime();
         }
     }
 
-    // Report congestion and traffic stats
-    void reportStats() {
-        cout << "\nTraffic Report:\n";
-        int arrived = 0, waiting = 0;
-        double totalWaitTime = 0;
-        for (const auto& vehicle : vehicles) {
-            if (vehicle->arrived) arrived++;
-            if (vehicle->inQueue) waiting++;
-            totalWaitTime += vehicle->waitTime;
-        }
-        cout << "Total Vehicles: " << vehicles.size() << endl;
-        cout << "Arrived: " << arrived << endl;
-        cout << "Waiting in Queues: " << waiting << endl;
-        cout << "Average Wait Time: " << (vehicles.empty() ? 0 : totalWaitTime / vehicles.size()) << " steps\n";
-        cout << "Traffic Density: " << network.calculateTrafficDensity() << " vehicles/intersection\n";
+    void run(int max_time) {
+        while (current_time < max_time && window.isOpen()) {
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed) window.close();
+            }
 
-        // Congestion analysis per intersection
-        cout << "Intersection Congestion:\n";
-        for (const auto& inter : network.intersections) {
-            cout << "Intersection " << inter.id << ": Avg Wait Time = " << inter.getAverageWaitTime()
-                 << ", Queue Size = " << inter.queue.size() << endl;
+            if (current_time >= next_spawn_time) {
+                int start = uniform_int_distribution<>(0, 24)(gen);
+                int end = uniform_int_distribution<>(0, 24)(gen);
+                while (end == start) end = uniform_int_distribution<>(0, 24)(gen);
+                spawn_vehicle(vehicles.size() + 1, start, end);
+                next_spawn_time = current_time + uniform_int_distribution<>(1, 5)(gen);
+            }
+
+            update_vehicles_on_roads();
+            process_intersections();
+            render();
+            current_time++;
+
+            sf::sleep(sf::milliseconds(100));
         }
     }
 
-    // Main simulation loop
-    void run(int maxSteps) {
-        setup();
-        while (time < maxSteps) {
-            cout << "\nTime Step " << time << ":\n";
+    void render() {
+        window.clear(sf::Color::Black);
 
-            // Update traffic lights
-            updateTrafficLights();
-
-            // Display intersection status
-            for (auto& inter : network.intersections) {
-                cout << "Intersection " << inter.id << ": Light = " << inter.light.getStateString()
-                     << ", Timer = " << inter.light.timer << ", Queue = " << inter.queue.size() << endl;
+        // Draw roads with density coloring
+        for (auto road : road_network->roads) {
+            int num_vehicles = road->vehicles.size();
+            sf::Color road_color = num_vehicles == 0 ? sf::Color::White : num_vehicles <= 2 ? sf::Color::Yellow : sf::Color::Red;
+            Intersection* from = nullptr;
+            Intersection* to = nullptr;
+            for (auto inter : road_network->intersections) {
+                if (inter->id == road->from) from = inter;
+                if (inter->id == road->to) to = inter;
             }
-
-            // Process queues and move vehicles
-            processQueues();
-            addVehiclesToQueues();
-
-            // Random accident with 10% chance per step
-            if (rand() % 100 < 10) {
-                simulateAccident();
+            if (from && to) {
+                sf::Vertex line[] = {
+                    sf::Vertex(sf::Vector2f(from->x * 160 + 80, from->y * 160 + 80), road_color),
+                    sf::Vertex(sf::Vector2f(to->x * 160 + 80, to->y * 160 + 80), road_color)
+                };
+                window.draw(line, 2, sf::Lines);
             }
-
-            // Display vehicle status
-            cout << "Vehicle Status:\n";
-            for (const auto& vehicle : vehicles) {
-                cout << "Vehicle " << vehicle->id << (vehicle->isEmergency() ? " (Emergency)" : "")
-                     << ": At " << vehicle->current << (vehicle->arrived ? " (Arrived)" : "")
-                     << ", Wait Time = " << vehicle->waitTime << endl;
-            }
-
-            // Report stats every 5 steps
-            if (time % 5 == 0) {
-                reportStats();
-            }
-
-            // Process user input
-            processUserInput();
-
-            // Pause for readability
-            this_thread::sleep_for(chrono::milliseconds(1000));
-            time++;
         }
 
-        // Clean up dynamically allocated vehicles
-        for (auto vehicle : vehicles) {
-            delete vehicle;
+        // Draw intersections with traffic light status
+        for (auto inter : road_network->intersections) {
+            sf::CircleShape circle(10);
+            auto allowed = inter->traffic_light->get_allowed_labels(current_time);
+            circle.setFillColor(find(allowed.begin(), allowed.end(), "north") != allowed.end() ? sf::Color::Green : sf::Color::Red);
+            circle.setPosition(inter->x * 160 + 70, inter->y * 160 + 70);
+            window.draw(circle);
         }
-        vehicles.clear();
 
-        cout << "Simulation ended.\n";
+        // Draw vehicles
+        for (auto veh : vehicles) {
+            if (veh->current_road) {
+                Intersection* from = nullptr;
+                Intersection* to = nullptr;
+                for (auto inter : road_network->intersections) {
+                    if (inter->id == veh->current_road->from) from = inter;
+                    if (inter->id == veh->current_road->to) to = inter;
+                }
+                if (from && to) {
+                    double ratio = veh->position / veh->current_road->length;
+                    double x = from->x * 160 + 80 + ratio * (to->x * 160 + 80 - from->x * 160 - 80);
+                    double y = from->y * 160 + 80 + ratio * (to->y * 160 + 80 - from->y * 160 - 80);
+                    sf::RectangleShape rect(veh->size);
+                    rect.setFillColor(veh->color);
+                    rect.setPosition(x - veh->size.x / 2, y - veh->size.y / 2);
+                    window.draw(rect);
+                }
+            } else {
+                // Waiting at intersection
+                int inter_id = veh->path[veh->current_index];
+                Intersection* inter = nullptr;
+                for (auto i : road_network->intersections) {
+                    if (i->id == inter_id) {
+                        inter = i;
+                        break;
+                    }
+                }
+                if (inter) {
+                    sf::RectangleShape rect(veh->size);
+                    rect.setFillColor(veh->color);
+                    rect.setPosition(inter->x * 160 + 80 - veh->size.x / 2, inter->y * 160 + 80 - veh->size.y / 2);
+                    window.draw(rect);
+                }
+            }
+        }
+
+        // Draw simulation stats
+        sf::Text text;
+        text.setFont(font);
+        text.setString("Time: " + to_string(current_time) + " s\nVehicles: " + to_string(vehicles.size()));
+        text.setCharacterSize(24);
+        text.setFillColor(sf::Color::White);
+        text.setPosition(10, 10);
+        window.draw(text);
+
+        window.display();
     }
 
-    // Destructor to ensure cleanup
     ~Simulation() {
-        for (auto vehicle : vehicles) {
-            delete vehicle;
+        for (auto veh : vehicles) delete veh;
+        for (auto road : road_network->roads) delete road;
+        for (auto inter : road_network->intersections) {
+            delete inter->traffic_light;
+            delete inter;
         }
-        vehicles.clear();
+        delete road_network;
     }
 };
 
-// Main function
 int main() {
-    srand(time(0));
-    Simulation sim;
-    sim.run(20); // Run for 20 steps
+    // 5x5 grid setup
+    RoadNetwork* rn = new RoadNetwork();
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            rn->add_intersection(i * 5 + j, i, j);
+        }
+    }
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 4; j++) {
+            int id1 = i * 5 + j;
+            int id2 = i * 5 + j + 1;
+            rn->add_road(id1, id2, 100, 10);
+            rn->add_road(id2, id1, 100, 10);
+        }
+    }
+    for (int j = 0; j < 5; j++) {
+        for (int i = 0; i < 4; i++) {
+            int id1 = i * 5 + j;
+            int id2 = (i + 1) * 5 + j;
+            rn->add_road(id1, id2, 100, 10);
+            rn->add_road(id2, id1, 100, 10);
+        }
+    }
+    rn->setup_traffic_lights();
+
+    Simulation sim(rn);
+    sim.run(60); // Run for 60 seconds
+
     return 0;
 }
