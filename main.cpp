@@ -57,7 +57,7 @@ class Node
 {
 private:
     int id;
-    float x, y;  // Coordinates for visualization
+    float x, y;  // Coordinates for visualizatioconst int RED_LIGHT_DURATION = 15;n
     TrafficLight* trafficLight;
     std::vector<Vehicle*> waitingVehicles;
 
@@ -226,7 +226,7 @@ public:
     void run(int simulationTime);
 };
 
-// Visualization class for SFML rendering
+// Visualconst int RED_LIGHT_DURATION = 15;ization class for SFML rendering
 class Visualization
 {
 private:
@@ -399,7 +399,7 @@ void Edge::draw(sf::RenderWindow& window)
 
 // Implementation of TrafficLight class
 TrafficLight::TrafficLight(Node* node)
-    : currentState(TrafficLightState::RED), timeInCurrentState(0), parentNode(node)
+    : currentState(TrafficLightState::GREEN), timeInCurrentState(0), parentNode(node)
 {
 }
 
@@ -588,7 +588,7 @@ void Vehicle::move(int timeElapsed)
     }
     
     // Calculate how much to move based on speed, time elapsed, and edge weight
-    float moveAmount = (speed * timeElapsed) / (currentEdge->getWeight() * 1000.0f);
+    float moveAmount = (speed * timeElapsed) / (currentEdge->getWeight());
     progress += moveAmount;
     
     // Clamp progress to [0, 1]
@@ -1027,7 +1027,7 @@ void Simulator::run(int simulationTime)
         vis.render();
         
         // Sleep to control simulation speed
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 }
 
