@@ -6,6 +6,8 @@
 // - Accident simulation
 // - Visualization with SFML
 
+// increase number of vehicles
+
 #include <iostream>
 #include <vector>
 #include <queue>
@@ -28,9 +30,9 @@ class Visualization;
 
 // Constants
 const int INFINITY_VALUE = std::numeric_limits<int>::max();
-const int RED_LIGHT_DURATION = 15;      // seconds (increased from 5)
-const int GREEN_LIGHT_DURATION = 20;    // seconds (increased from 7)
-const int YELLOW_LIGHT_DURATION = 5;    // seconds (increased from 2)
+const int RED_LIGHT_DURATION = 5;      // seconds (increased from 5)
+const int GREEN_LIGHT_DURATION = 7;    // seconds (increased from 7)
+const int YELLOW_LIGHT_DURATION = 2;    // seconds (increased from 2)
 const int ACCIDENT_DURATION = 10;       // seconds
 const int SCREEN_WIDTH = 1200;
 const int SCREEN_HEIGHT = 800;
@@ -118,7 +120,7 @@ private:
     Node* parentNode;
     
     // Direction mappings for traffic flow control
-    std::vector<std::pair<Edge*, Edge*>> flowDirections;
+    // std::vector<std::pair<Edge*, Edge*>> flowDirections;
 
 public:
     TrafficLight(Node* node);
@@ -1200,7 +1202,7 @@ int main()
     
     // Create simulator with 8 nodes and 12 edges
     Simulator simulator;
-    simulator.initialize(8, 12);
+    simulator.initialize(10, 15);
     
     // Run simulation for a fixed time
     simulator.run(TOTAL_SIMULATION_TIME);
